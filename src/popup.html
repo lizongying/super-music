@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh_CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+</head>
+<body>
+<div class="wrapper">
+    <div id="bg" class="bg">
+        <div class="bg-cover"></div>
+    </div>
+    <div class="title">
+        <div class="music-info">
+            <div id="song" class="song"></div>
+            <div id="artist" class="artist"></div>
+        </div>
+    </div>
+    <div class="play-board">
+        <img id="needle" class="play-needle pause-needle" src="<%= require('./images/play_needle.png') %>"/>
+        <div class="disk-bg"></div>
+        <div class="disk-cover disk-cover-animation hidden">
+            <img class="album" src="<%= require('./images/placeholder_disk_play_song.png') %>"/>
+            <img class="disk-border" src="<%= require('./images/play_disc.png') %>"/>
+        </div>
+        <div class="disk-cover disk-cover-animation">
+            <img class="album" src="<%= require('./images/placeholder_disk_play_song.png') %>"/>
+            <img class="disk-border" src="<%= require('./images/play_disc.png') %>"/>
+        </div>
+        <div class="disk-cover disk-cover-animation hidden">
+            <img class="album" src="<%= require('./images/placeholder_disk_play_song.png') %>"/>
+            <img class="disk-border" src="<%= require('./images/play_disc.png') %>"/>
+        </div>
+        <div id="lyric" class="lyric hidden"></div>
+        <div class="footer">
+            <div id="process" class="process">
+                <span id="current-time">00:00</span>
+                <div class="process-bar">
+                    <div class="rdy"></div>
+                    <div class="cur">
+                        <span id="process-btn" class="process-btn c-btn"></span>
+                    </div>
+                </div>
+                <span id="total-time">00:00</span>
+            </div>
+            <div class="control" id="controls">
+                <span class="loop c-btn"></span>
+                <span class="prev c-btn"></span>
+                <span class="play c-btn"></span>
+                <span class="pause c-btn hidden"></span>
+                <span class="next c-btn"></span>
+                <span class="list c-btn"></span>
+            </div>
+        </div>
+    </div>
+    <div id="playlist" class="playlist">
+        <div class="list-title">播放列表（<span id="list-count">0</span>）</div>
+        <ul id="list-content" class="list-content"></ul>
+    </div>
+</div>
+</body>
+</html>
