@@ -1,20 +1,20 @@
 import {qq} from './qq';
 import {google} from './google';
 
+
+// 通知
+const notify = (data) => {
+    chrome.runtime.sendMessage(data);
+    chrome.tabs.query({'active': true, currentWindow: true}, (tabs) => {
+        if (tabs.length === 0) {
+            return
+        }
+        chrome.tabs.sendMessage(tabs[0].id, data);
+    });
+};
+
+
 const obj = {
-    $curBar: null,
-    $curTime: null,
-    $listContent: null,
-    $lyric: null,
-    $needle: null,
-    $pauseBtn: null,
-    $playBtn: null,
-    $playlist: null,
-    $processBar: null,
-    $processBtn: null,
-    $rdyBar: null,
-    $totTime: null,
-    diskCovers: [],
     currentIndex: 0,
     currentSong: null,
     lyricIndex: 0,
@@ -42,6 +42,9 @@ window.ctx = obj;
 
 chrome.runtime.onMessage.addListener(
     (request, sender, sendResponse) => {
+        if (!sender.tab) {
+            return
+        }
         if (request instanceof Array) {
             eval(request[0])(...request.slice(1));
             return
@@ -109,44 +112,12 @@ ctx.updateSong = () => {
     }
 };
 
-ctx.callbackSong = (song) => {
-    if (song) {
-        ctx.currentSong.src = song.src;
-    }
-    if (ctx.player.src !== ctx.currentSong.src) {
-        ctx.player.src = ctx.currentSong.src;
-    }
-    if (ctx.lyricShow) {
-        ctx.lyricIndex = 0;
-        ctx.initLyric();
-    }
-    const popup = ctx.getPopup();
-    if (popup) {
+ctx.setBadge = (details) => {
+    chrome.browserAction.setBadgeText(details);
+};
 
-        // 更新信息
-        notify(['updateMusicInfo']);
-    }
-    ctx.setInterval();
-
-    if (popup) {
-
-        // 默认按钮
-        notify(['initBtn']);
-    }
-    ctx.updateCoverState(0);
-    if (popup) {
-
-        // 更新图片
-        notify(['updatePic']);
-    }
-
-    if (ctx.isPlaying) {
-        setTimeout(ctx.play, 500);
-    }
-    localStorage.setItem('currentSongIndex', ctx.currentIndex.toString());
-    if (ctx.lyricShow) {
-        ctx.getLyric(ctx.currentSong, ctx.callbackLyric);
-    }
+ctx.setBadgeBackgroundColor = (details) => {
+    chrome.browserAction.setBadgeBackgroundColor(details);
 };
 
 // 默认歌词
@@ -233,13 +204,6 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
     ['blocking', 'requestHeaders']
 );
 
-ctx.init = () => {
-    ctx.initData();
-    ctx.initState();
-    ctx.initPlayList();
-    ctx.updateSong();
-};
-
 // 播放
 ctx.play = () => {
     ctx.player.play();
@@ -278,12 +242,12 @@ ctx.next = () => {
     }
 };
 
-// 移动到指定位置
+// 切换歌曲
 ctx.moveTo = (index) => {
     if (ctx.songUpdated) {
         ctx.currentIndex = index;
         ctx.preSwitchSong();
-        setTimeout(ctx.updateCoverState(1, true), ctx.isPlaying ? 400 : 0);
+        notify(['moveTo']);
     }
 };
 
@@ -297,50 +261,7 @@ ctx.showPlaylist = () => {
     notify(['showPlaylist']);
 };
 
-ctx.callbackLyricTransfer = (data) => {
-    const obj = data['transfer'].split('|*');
-    ctx.currentSong.lyric = ctx.currentSong.lyric.map((item, index) => {
-        item.transfer = obj[index];
-        return item
-    });
-};
-
-ctx.callbackPlaylist = (playlist) => {
-    if (playlist.length === 0) {
-        return;
-    }
-    ctx.playlist = playlist;
-    ctx.currentSong = ctx.playlist[ctx.currentIndex];
-    if (ctx.lyricShow) {
-        const playlistStr = ctx.playlist.map((item) => {
-            return item.song + ';' + item.artist
-        });
-        const text = playlistStr.join('|*');
-        ctx.google.transfer(text, ctx.callbackTransferPlaylist);
-    }
-    ctx.init();
-};
-
-ctx.callbackTransferPlaylist = (data) => {
-    const obj = data['transfer'].split('|*');
-    obj.forEach((item, index) => {
-        const info = item.split(';');
-        ctx.playlist[index].songTransfer = info[0];
-        ctx.playlist[index].artistTransfer = info[1];
-        ctx.playlist[index].transfer = true;
-    });
-    ctx.initPlayList();
-};
-
-ctx.callbackTransfer = (data) => {
-    const obj = data['transfer'].split('|*');
-    ctx.currentSong.songTransfer = obj[0];
-    ctx.currentSong.artistTransfer = obj[1];
-    updateMusicInfo();
-    ctx.initPlayList();
-    ctx.initLyric();
-};
-
+// 歌词
 ctx.callbackLyric = (song) => {
     const lyricArr = song.lyric.split('\n');
     const test = /(\d{2}):(\d{2}\.\d{2})](.*)/;
@@ -356,13 +277,153 @@ ctx.callbackLyric = (song) => {
     ctx.google.transfer(lyricTextArr.join('|*'), ctx.callbackLyricTransfer);
 };
 
-// 通知
-const notify = (data) => {
-    chrome.runtime.sendMessage(data);
-    chrome.tabs.query({'active': true, currentWindow: true}, (tabs) => {
-        if (tabs.length === 0) {
-            return
-        }
-        chrome.tabs.sendMessage(tabs[0].id, data);
+// 翻译的歌词
+ctx.callbackLyricTransfer = (data) => {
+    const obj = data['transfer'].split('|*');
+    ctx.currentSong.lyric = ctx.currentSong.lyric.map((item, index) => {
+        item.transfer = obj[index];
+        return item
     });
 };
+
+// 播放列表
+ctx.callbackPlaylist = (playlist) => {
+    if (playlist.length === 0) {
+        console.log('playlist is empty');
+        return;
+    }
+    ctx.playlist = playlist;
+    ctx.currentSong = ctx.playlist[ctx.currentIndex];
+    console.log(ctx.playlist);
+    console.log(ctx.currentSong);
+    ctx.setBadge({text: '♪'});
+    if (ctx.lyricShow) {
+        const playlistStr = ctx.playlist.map((item) => {
+            return item.song + ';;' + item.artist
+        });
+        for (let i = 0, len = playlistStr.length; i < len; i += 100) {
+            const str = playlistStr.slice(i, i + 100);
+            const text = str.join('|*$');
+            ctx.google.transfer(text, i + 100, ctx.callbackTransferPlaylist);
+        }
+    }
+};
+
+// 翻译的播放列表
+ctx.callbackTransferPlaylist = (data) => {
+    const obj = data['transfer'].split('|*');
+    obj.forEach((item, index) => {
+        const info = item.split(';');
+        ctx.playlist[index].songTransfer = info[0];
+        ctx.playlist[index].artistTransfer = info[1];
+        ctx.playlist[index].transfer = true;
+    });
+    ctx.initPlayList();
+};
+
+// 歌曲
+ctx.callbackSong = (song) => {
+    if (song) {
+        ctx.currentSong.src = song.src;
+    }
+    if (ctx.player.src !== ctx.currentSong.src) {
+        ctx.player.src = ctx.currentSong.src;
+    }
+    if (ctx.lyricShow) {
+        ctx.lyricIndex = 0;
+        ctx.initLyric();
+    }
+    const popup = ctx.getPopup();
+    if (popup) {
+
+        // 更新信息
+        notify(['updateMusicInfo']);
+    }
+    ctx.setInterval();
+
+    if (popup) {
+
+        // 默认按钮
+        notify(['initBtn']);
+    }
+    ctx.updateCoverState(0);
+    if (popup) {
+
+        // 更新图片
+        notify(['updatePic']);
+    }
+
+    if (ctx.isPlaying) {
+        setTimeout(ctx.play, 500);
+    }
+    localStorage.setItem('currentSongIndex', ctx.currentIndex.toString());
+    if (ctx.lyricShow) {
+        ctx.getLyric(ctx.currentSong, ctx.callbackLyric);
+    }
+};
+
+// 翻译的歌曲
+ctx.callbackTransfer = (data) => {
+    const obj = data['transfer'].split('|*');
+    ctx.currentSong.songTransfer = obj[0];
+    ctx.currentSong.artistTransfer = obj[1];
+    updateMusicInfo();
+    ctx.initPlayList();
+    ctx.initLyric();
+};
+
+//
+// var pop = chrome.extension.getViews({type:'popup'});//获取popup页面
+// console.log(pop[0].b);//调用第一个popup的变量或方法。
+
+// 初始化ui
+ctx.initUi = () => {
+
+    // 初始化组件
+    notify(['initData']);
+
+    // 初始化状态
+    notify(['initState']);
+
+    // 初始化播放列表
+    notify(['initPlayList']);
+
+    // ctx.updateSong();
+};
+
+// 初始化
+ctx.init = () => {
+    let playlistIdArr = ['qq', 'playsquare', '895009342'];
+    const lastPlaylistId = localStorage.getItem('lastPlaylistId');
+    const lastPlaylistIdArr = lastPlaylistId ? lastPlaylistId.split('/') : ['', '', ''];
+    if (lastPlaylistId && lastPlaylistIdArr.length === 3) {
+        playlistIdArr = lastPlaylistIdArr;
+    }
+    if (!playlistIdArr[0] || !playlistIdArr[1] || !playlistIdArr[2]) {
+        return
+    }
+    ctx.getPlaylist = ctx[playlistIdArr[0]][playlistIdArr[1]];
+    ctx.getSong = ctx[playlistIdArr[0]]['getSong'];
+    ctx.getLyric = ctx[playlistIdArr[0]]['getLyric'];
+    if (lastPlaylistIdArr[2] === playlistIdArr[2]) {
+
+        // 已有的播放列表
+        ctx.currentIndex = +localStorage.getItem('currentSongIndex');
+        if (!ctx.playlist.length) {
+            ctx.getPlaylist(playlistIdArr, ctx.callbackPlaylist);
+        } else {
+
+            // 初始化ui
+            ctx.initUi();
+        }
+    } else {
+
+        // 新的播放列表
+        ctx.currentIndex = 0;
+        localStorage.setItem('lastPlaylistId', playlistIdArr.join('/'));
+        ctx.getPlaylist(playlistIdArr, ctx.callbackPlaylist);
+    }
+};
+
+// 初始化
+ctx.init();

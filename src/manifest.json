@@ -4,14 +4,15 @@
   "version": "0.0.6",
   "description": "超级音乐可以播放QQ音乐：会员的歌曲、需要单独购买的歌曲、网页端没有的高品质歌曲、因版权问题全平台都不能播放的歌曲。",
   "browser_action": {
-    "default_title": "Super Music",
     "default_icon": "icon.png",
+    "default_title": "Super Music",
     "default_popup": "popup.html"
   },
   "background": {
     "scripts": [
       "background.js"
-    ]
+    ],
+    "persistent": true
   },
   "content_security_policy": "script-src 'self' 'unsafe-eval' https://c.y.qq.com https://translate.google.cn; object-src 'self'",
   "permissions": [

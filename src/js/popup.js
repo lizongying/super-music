@@ -2,11 +2,11 @@ const ctx = chrome.extension.getBackgroundPage().ctx;
 
 // 更新播放列表
 const updatePlaylist = (currentIndex) => {
-    ctx.$listContent.children('li.active').removeClass('active').children('div.voice-icon').remove();
-    ctx.$listContent.children('li').eq(currentIndex).addClass('active')
+    $popup.$listContent.children('li.active').removeClass('active').children('div.voice-icon').remove();
+    $popup.$listContent.children('li').eq(currentIndex).addClass('active')
         .prepend($('<div>').addClass('voice-icon'));
-    ctx.$listContent.animate({
-        scrollTop: (currentIndex + 1) * 41 - ctx.$listContent.height() / 2
+    $popup.$listContent.animate({
+        scrollTop: (currentIndex + 1) * 41 - $popup.$listContent.height() / 2
     });
 };
 
@@ -85,14 +85,19 @@ const next = () => {
     setTimeout(ctx.updateCoverState(1), ctx.isPlaying ? 400 : 0);
 };
 
+// 切换歌曲
+const moveTo = () => {
+    setTimeout(ctx.updateCoverState(1, true), ctx.isPlaying ? 400 : 0);
+};
+
 // 隐藏播放列表
 const hidePlayList = () => {
-    ctx.$playlist.animate({bottom: -ctx.$playlist.height() + 'px'}, 200);
+    $popup.$playlist.animate({bottom: -$popup.$playlist.height() + 'px'}, 200);
 };
 
 // 显示播放列表
 const showPlaylist = () => {
-    ctx.$playlist.animate({bottom: '0px'}, 200);
+    $popup.$playlist.animate({bottom: '0px'}, 200);
 };
 
 // 默认按钮
@@ -159,45 +164,25 @@ ctx.changeAnimationState = ($ele, state) => {
     });
 };
 
-// 默认组件
-ctx.initData = () => {
-    ctx.$curBar = $('#process .cur');
-    ctx.$curTime = $('#current-time');
-    ctx.$listContent = $('#list-content');
-    ctx.$lyric = $('#lyric');
-    ctx.$needle = $('#needle');
-    ctx.$pauseBtn = $('#controls .pause');
-    ctx.$playBtn = $('#controls .play');
-    ctx.$playlist = $('#playlist');
-    ctx.$processBar = $('#process .process-bar');
-    ctx.$processBtn = $('#process-btn');
-    ctx.$rdyBar = $('#process .rdy');
-    ctx.$totTime = $('#total-time');
-    ctx.diskCovers = [$('.disk-cover:eq(0)'), $('.disk-cover:eq(1)'), $('.disk-cover:eq(2)')];
+// 初始化组件
+const initData = () => {
+    $popup.$curBar = $('#process .cur');
+    $popup.$curTime = $('#current-time');
+    $popup.$listContent = $('#list-content');
+    $popup.$lyric = $('#lyric');
+    $popup.$needle = $('#needle');
+    $popup.$pauseBtn = $('#controls .pause');
+    $popup.$playBtn = $('#controls .play');
+    $popup.$playlist = $('#playlist');
+    $popup.$processBar = $('#process .process-bar');
+    $popup.$processBtn = $('#process-btn');
+    $popup.$rdyBar = $('#process .rdy');
+    $popup.$totTime = $('#total-time');
+    $popup.$diskCovers = [$('.disk-cover:eq(0)'), $('.disk-cover:eq(1)'), $('.disk-cover:eq(2)')];
 };
 
-// 默认播放列表
-ctx.initPlayList = () => {
-    ctx.$listContent.html('');
-    $('#list-count').html(ctx.playlist.length);
-    $.each(ctx.playlist, (i, item) => {
-        const $li = $('<li>').html(ctx.transfer ? item.songTransfer : item.song).append($('<span>').html('   -' + ctx.transfer ? item.artistTransfer : item.artist));
-        $li.on('click touch', () => {
-            if (ctx.currentIndex !== i) {
-                ctx.isPlaying = true;
-
-                // 移动到指定位置
-                ctx.moveTo(i);
-            }
-        });
-        ctx.$listContent.append($li);
-    });
-    $ui.updatePlaylist(ctx.currentIndex);
-    ctx.$playlist.css('bottom', -ctx.$playlist.height() + 'px');
-};
-
-// 默认状态
-ctx.initState = () => {
+// 初始化状态
+const initState = () => {
     $('img').attr('draggable', false);
     window.addEventListener('resize', ctx.updateCoverState);
     $('body').on('click touch', (e) => {
@@ -210,8 +195,29 @@ ctx.initState = () => {
     ctx.singleLoop ? $('#controls .loop').addClass('active') : null;
 };
 
+// 初始化播放列表
+const initPlayList = () => {
+    $popup.$listContent.html('');
+    $('#list-count').html(ctx.playlist.length);
+    $.each(ctx.playlist, (i, item) => {
+        const $li = $('<li>').html(ctx.transfer ? item.songTransfer : item.song).append($('<span>').html('   -' + ctx.transfer ? item.artistTransfer : item.artist));
+        $li.on('click touch', () => {
+            if (ctx.currentIndex !== i) {
+                ctx.isPlaying = true;
+
+                // 移动到指定位置
+                ctx.moveTo(i);
+            }
+        });
+        $popup.$listContent.append($li);
+    });
+    $popup.updatePlaylist(ctx.currentIndex);
+    $popup.$playlist.css('bottom', -$popup.$playlist.height() + 'px');
+};
+
 // 更新背景状态
 ctx.updateCoverState = (derection, preLoad) => {
+    console.log(333333);
     let temp, speed = 800, defaultUrl = require('../images/placeholder_disk_play_song.png'),
         preIndex = ctx.currentIndex - 1 < 0 ? ctx.playlist.length - 1 : ctx.currentIndex - 1,
         nextIndex = ctx.currentIndex + 2 > ctx.playlist.length ? 0 : ctx.currentIndex + 1,
@@ -266,7 +272,20 @@ ctx.updateCoverState = (derection, preLoad) => {
 };
 
 // ui
-window.$ui = {
+window.$popup = {
+    $curBar: null,
+    $curTime: null,
+    $listContent: null,
+    $lyric: null,
+    $needle: null,
+    $pauseBtn: null,
+    $playBtn: null,
+    $playlist: null,
+    $processBar: null,
+    $processBtn: null,
+    $rdyBar: null,
+    $totTime: null,
+    $diskCovers: [],
     updatePlaylist: updatePlaylist,
     changeNeedle: changeNeedle,
     cleanLyric: cleanLyric,
@@ -279,21 +298,26 @@ window.$ui = {
     loop: loop,
     prev: prev,
     next: next,
+    moveTo: moveTo,
     hidePlayList: hidePlayList,
     showPlaylist: showPlaylist,
+    initData: initData,
+    initState: initState,
+    initPlayList: initPlayList,
 };
 
 // 通信
 chrome.runtime.onMessage.addListener(
     (request, sender, sendResponse) => {
         if (request instanceof Array) {
-            eval(request[0])(...request.slice(1));
-            return
+            $popup[request[0]](...request.slice(1));
         }
     });
 
 $(() => {
     chrome.tabs.query({'active': true}, (tabs) => {
+        ctx.setBadge({text: ''});
+        let playlistIdArr = ['qq', 'playsquare', '895009342'];
         const lastPlaylistId = localStorage.getItem('lastPlaylistId');
         const lastPlaylistIdArr = lastPlaylistId ? lastPlaylistId.split('/') : ['', '', ''];
         const tabURL = tabs[0].url;
@@ -303,8 +327,7 @@ $(() => {
             {regex: /(qq)\/(singer)\/(.+?)\./},
             {regex: /(qq)\/(song)\/(.+?)\./},
         ];
-        let playlistIdArr = ['qq', 'playsquare', '895009342'];
-        if (lastPlaylistId) {
+        if (lastPlaylistId && lastPlaylistIdArr.length === 3) {
             playlistIdArr = lastPlaylistIdArr;
         }
         regexList.some((item) => {
@@ -314,6 +337,9 @@ $(() => {
                 return true;
             }
         });
+        if (!playlistIdArr[0] || !playlistIdArr[1] || !playlistIdArr[2]) {
+            return
+        }
         ctx.getPlaylist = ctx[playlistIdArr[0]][playlistIdArr[1]];
         ctx.getSong = ctx[playlistIdArr[0]]['getSong'];
         ctx.getLyric = ctx[playlistIdArr[0]]['getLyric'];
@@ -322,16 +348,18 @@ $(() => {
             // 已有的播放列表
             ctx.currentIndex = +localStorage.getItem('currentSongIndex');
             if (!ctx.playlist.length) {
-                ctx.getPlaylist(playlistIdArr, callbackPlaylist);
+                ctx.getPlaylist(playlistIdArr, ctx.callbackPlaylist);
             } else {
-                ctx.init();
+
+                // 初始化ui
+                ctx.initUi();
             }
         } else {
 
             // 新的播放列表
             ctx.currentIndex = 0;
             localStorage.setItem('lastPlaylistId', playlistIdArr.join('/'));
-            ctx.getPlaylist(playlistIdArr, callbackPlaylist);
+            ctx.getPlaylist(playlistIdArr, ctx.callbackPlaylist);
         }
     });
 
