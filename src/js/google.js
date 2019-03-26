@@ -33,13 +33,19 @@ const google = {
                     method: 'GET',
                     url: google.url,
                     success: (r) => {
-                        const test = /TKK=eval\('\(\(function\(\){(.+?)}\)\(\)\)'\);/;
-                        const res = test.exec(r);
-                        if (!res) {
-                            return;
+                        const test1 = /tkk:'(.+?)'/;
+                        const res1 = test1.exec(r);
+                        if (res1) {
+                            tkk = res1[1]
+                        } else {
+                            const test = /TKK=eval\('\(\(function\(\){(.+?)}\)\(\)\)'\);/;
+                            const res = test.exec(r);
+                            if (!res) {
+                                return
+                            }
+                            const str = res[1].replace(/\\x3d/g, '=').replace(/\\x27/g, '\'').replace(/return/g, 'tkk=');
+                            eval(str);
                         }
-                        const str = res[1].replace(/\\x3d/g, '=').replace(/\\x27/g, '\'').replace(/return/g, 'tkk=');
-                        eval(str);
                         const expiration = now + 60 * 60 * 1000;
                         localStorage.setItem('tkk', JSON.stringify({t: tkk, e: expiration}));
                         tk = google.getToken(q, tkk);
@@ -72,13 +78,18 @@ const google = {
                 url: url,
                 data: data,
                 success: (r) => {
-                    let transfer = '';
-                    let pinyin = '';
-                    r[0].forEach((item) => {
-                        transfer += item[0] ? item[0].trim() : '';
-                        pinyin = item[2] ? item[2].trim() : '';
+                    const index = r[0].shift();
+                    const pinyin = r[0].pop();
+                    const transfer = r[0].map((item) => {
+                        return item[0] ? item[0].trim() : '';
                     });
-                    callback({nation: r[2], 'language': r[8][3][0], transfer: transfer, pinyin: pinyin});
+                    callback({
+                        nation: r[2],
+                        language: r[8][3][0],
+                        index: index[0] ? parseInt(index[0].trim()) : 0,
+                        transfer: transfer,
+                        pinyin: pinyin[2] ? pinyin[2].trim() : '',
+                    });
                 },
                 error: () => {
                     google.transfer(q, callback, true)

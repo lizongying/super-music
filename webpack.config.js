@@ -13,9 +13,9 @@ module.exports = {
         path: path.join(__dirname, './dist')
     },
     entry: {
-        main: './src/js/main',
         background: './src/js/background',
         options: './src/js/options',
+        popup: './src/js/popup',
     },
     module: {
         rules: [
@@ -50,6 +50,7 @@ module.exports = {
             filename: 'popup.html',
             template: './src/popup.html',
             title: 'Super Music',
+            chunks: ['popup'],
             minify: {
                 collapseBooleanAttributes: true,
                 collapseWhitespace: true,
@@ -74,6 +75,7 @@ module.exports = {
             filename: 'options.html',
             template: './src/options.html',
             title: 'Super Music',
+            chunks: ['options'],
             minify: {
                 collapseBooleanAttributes: true,
                 collapseWhitespace: true,

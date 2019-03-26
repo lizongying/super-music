@@ -4,6 +4,16 @@ import {google} from './google';
 
 // 通知
 const notify = (data) => {
+    const tab = chrome.extension.getViews({type: 'tab'});
+    const popup = chrome.extension.getViews({type: 'popup'});
+    [tab, popup].map((v) => {
+        if (!v || !(v instanceof Array) || !tab.length) {
+            return;
+        }
+        if (data instanceof Array) {
+            v[0].$ui[data[0]] && v[0].$ui[data[0]](...data.slice(1));
+        }
+    });
     chrome.runtime.sendMessage(data);
     chrome.tabs.query({'active': true, currentWindow: true}, (tabs) => {
         if (tabs.length === 0) {
@@ -25,6 +35,7 @@ const obj = {
     originX: 0,
     player: new Audio(),
     playlist: [],
+    playlistLang: '',
     processBtnState: 0,
     singleLoop: false,
     songUpdated: true,
@@ -98,14 +109,10 @@ ctx.preSwitchSong = () => {
     }
 };
 
+// 更新歌曲
 ctx.updateSong = () => {
     if (!ctx.currentSong.src) {
-        const popup = ctx.getPopup();
-        if (popup) {
-
-            // 清空歌词
-            notify(['cleanLyric']);
-        }
+        notify(['cleanLyric']);
         ctx.getSong(ctx.currentSong, ctx.callbackSong);
     } else {
         ctx.callbackSong();
@@ -118,34 +125,6 @@ ctx.setBadge = (details) => {
 
 ctx.setBadgeBackgroundColor = (details) => {
     chrome.browserAction.setBadgeBackgroundColor(details);
-};
-
-// 默认歌词
-ctx.initLyric = () => {
-    if (!ctx.currentSong.lyric) {
-        return;
-    }
-    const popup = ctx.getPopup();
-    if (!ctx.transfer) {
-        if (popup) {
-
-            // 隐藏歌词
-            notify(['hiddenLyric']);
-        }
-        return;
-    }
-    let lyricContent = '';
-    ctx.currentSong.lyric.forEach((item) => {
-        lyricContent += '<p>' + (item.transfer ? item.transfer : item.text);
-    });
-    if (popup) {
-
-        // 添加歌词
-        notify(['addLyric', lyricContent]);
-
-        // 隐藏歌词
-        notify(['hiddenLyric']);
-    }
 };
 
 ctx.setInterval = () => {
@@ -175,6 +154,11 @@ ctx.updateProcess = () => {
     }
 };
 
+let extraInfoSpec = ['blocking', 'requestHeaders'];
+if (chrome.webRequest.OnBeforeSendHeadersOptions.hasOwnProperty('EXTRA_HEADERS')) {
+    extraInfoSpec.push('extraHeaders');
+}
+
 chrome.webRequest.onBeforeSendHeaders.addListener(
     (details) => {
         if (details.type === 'xmlhttprequest' && details.url.indexOf('fcg_ucc_getcdinfo_byids_cp.fcg')) {
@@ -201,21 +185,14 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
             'https://c.y.qq.com/lyric/fcgi-bin/fcg_query_lyric_new.fcg*',
         ]
     },
-    ['blocking', 'requestHeaders']
+    extraInfoSpec
 );
 
 // 播放
 ctx.play = () => {
-    ctx.player.play();
-    ctx.isPlaying = true;
+    ctx.isPlaying ? ctx.player.pause() : ctx.player.play();
+    ctx.isPlaying = !ctx.isPlaying;
     notify(['play']);
-};
-
-// 暂停
-ctx.pause = () => {
-    ctx.player.pause();
-    ctx.isPlaying = false;
-    notify(['pause']);
 };
 
 // 循环
@@ -274,16 +251,29 @@ ctx.callbackLyric = (song) => {
             lyricTextArr.push(result[3]);
         }
     });
-    ctx.google.transfer(lyricTextArr.join('|*'), ctx.callbackLyricTransfer);
+
+    // 更新歌词
+    notify(['addLyric', lyricTextArr]);
+    console.log(lyricTextArr);
+    ctx.google.transfer(0 + '\n' + lyricTextArr.join('\n'), ctx.callbackLyricTransfer);
 };
 
 // 翻译的歌词
 ctx.callbackLyricTransfer = (data) => {
-    const obj = data['transfer'].split('|*');
-    ctx.currentSong.lyric = ctx.currentSong.lyric.map((item, index) => {
-        item.transfer = obj[index];
-        return item
+    console.log(data);
+    const obj = data['transfer'];
+    let objIndex = 0;
+    ctx.currentSong.lyric.forEach((item) => {
+        if (item.text.length) {
+            item.transfer = obj[objIndex];
+            objIndex++;
+        } else {
+            item.transfer = '';
+        }
     });
+    console.log(ctx.currentSong.lyric);
+    // notify(['initPlaylist']);
+    // notify(['initPlaylistLang']);
 };
 
 // 播放列表
@@ -294,31 +284,43 @@ ctx.callbackPlaylist = (playlist) => {
     }
     ctx.playlist = playlist;
     ctx.currentSong = ctx.playlist[ctx.currentIndex];
-    console.log(ctx.playlist);
     console.log(ctx.currentSong);
     ctx.setBadge({text: '♪'});
-    if (ctx.lyricShow) {
-        const playlistStr = ctx.playlist.map((item) => {
-            return item.song + ';;' + item.artist
-        });
-        for (let i = 0, len = playlistStr.length; i < len; i += 100) {
-            const str = playlistStr.slice(i, i + 100);
-            const text = str.join('|*$');
-            ctx.google.transfer(text, i + 100, ctx.callbackTransferPlaylist);
-        }
+
+    // 翻译播放列表
+    ctx.transferPlaylist();
+
+    // 更新歌曲
+    ctx.updateSong();
+};
+
+// 翻译播放列表
+ctx.transferPlaylist = () => {
+    if (!ctx.playlist.length) {
+        console.log('playlist is empty');
+        return;
+    }
+    const playlistArr = ctx.playlist.map((item) => {
+        return item.song;
+    });
+    for (let i = 0, len = playlistArr.length; i < len; i += 100) {
+        const arr = playlistArr.slice(i, i + 100);
+        const text = i + '\n' + arr.join('\n');
+        ctx.google.transfer(text, ctx.callbackTransferPlaylist);
     }
 };
 
 // 翻译的播放列表
 ctx.callbackTransferPlaylist = (data) => {
-    const obj = data['transfer'].split('|*');
+    ctx.playlistLang = data['language'];
+    const obj = data['transfer'];
+    const num = data['index'];
     obj.forEach((item, index) => {
-        const info = item.split(';');
-        ctx.playlist[index].songTransfer = info[0];
-        ctx.playlist[index].artistTransfer = info[1];
-        ctx.playlist[index].transfer = true;
+        index += num * 100;
+        ctx.playlist[index].songTransfer = item;
     });
-    ctx.initPlayList();
+    notify(['initPlaylist']);
+    notify(['initPlaylistLang']);
 };
 
 // 歌曲
@@ -333,12 +335,8 @@ ctx.callbackSong = (song) => {
         ctx.lyricIndex = 0;
         ctx.initLyric();
     }
+    notify(['updateMusicInfo']);
     const popup = ctx.getPopup();
-    if (popup) {
-
-        // 更新信息
-        notify(['updateMusicInfo']);
-    }
     ctx.setInterval();
 
     if (popup) {
@@ -346,7 +344,8 @@ ctx.callbackSong = (song) => {
         // 默认按钮
         notify(['initBtn']);
     }
-    ctx.updateCoverState(0);
+
+    notify(['updateCoverState', 0]);
     if (popup) {
 
         // 更新图片
@@ -356,10 +355,8 @@ ctx.callbackSong = (song) => {
     if (ctx.isPlaying) {
         setTimeout(ctx.play, 500);
     }
+    ctx.getLyric(ctx.currentSong, ctx.callbackLyric);
     localStorage.setItem('currentSongIndex', ctx.currentIndex.toString());
-    if (ctx.lyricShow) {
-        ctx.getLyric(ctx.currentSong, ctx.callbackLyric);
-    }
 };
 
 // 翻译的歌曲
@@ -368,7 +365,7 @@ ctx.callbackTransfer = (data) => {
     ctx.currentSong.songTransfer = obj[0];
     ctx.currentSong.artistTransfer = obj[1];
     updateMusicInfo();
-    ctx.initPlayList();
+    // ctx.initPlayList();
     ctx.initLyric();
 };
 
@@ -379,16 +376,8 @@ ctx.callbackTransfer = (data) => {
 // 初始化ui
 ctx.initUi = () => {
 
-    // 初始化组件
-    notify(['initData']);
-
     // 初始化状态
     notify(['initState']);
-
-    // 初始化播放列表
-    notify(['initPlayList']);
-
-    // ctx.updateSong();
 };
 
 // 初始化

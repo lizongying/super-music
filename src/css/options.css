@@ -1,0 +1,50 @@
+body {
+    margin: 0;
+    position: relative;
+    background-image: url(../images/bg_body.gif);
+    font-size: xx-large;
+}
+
+.operation {
+    position: fixed;
+    z-index: 9;
+    bottom: 1rem;
+    right: 1rem;
+}
+
+.operation span {
+    cursor: pointer;
+}
+
+.playlist {
+    display: none;
+}
+
+.playlist, .lyric {
+    position: fixed;
+    background-color: rgba(0, 0, 0, 0.2);
+    list-style-type: none;
+    margin: 0;
+    overflow: scroll;
+    overflow-x: hidden;
+    overflow-y: auto;
+    height: 100%;
+    width: auto;
+}
+
+.playlist li, .lyric li {
+    cursor: pointer;
+}
+
+.tradition {
+    overflow-x: auto;
+    overflow-y: hidden;
+    height: auto;
+    width: 100%;
+    writing-mode: vertical-rl;
+    -webkit-writing-mode: vertical-rl;
+}
+
+button {
+    outline: none;
+}

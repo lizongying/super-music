@@ -202,7 +202,7 @@ html, body {
 
 .cur .process-btn {
     cursor: pointer;
-    background-image: url(./images/process_btn.png);
+    background-image: url(../images/process_btn.png);
     background-size: cover;
     position: absolute;
     top: -9px;
@@ -244,7 +244,7 @@ html, body {
 }
 
 .control .c-btn.prev {
-    background-image: url(./images/play_btn_prev.png);
+    background-image: url(../images/play_btn_prev.png);
 }
 
 .control .c-btn.play, .c-btn.pause {
@@ -253,15 +253,15 @@ html, body {
 }
 
 .control .c-btn.play {
-    background-image: url(./images/play_rdi_btn_play.png);
+    background-image: url(../images/play_rdi_btn_play.png);
 }
 
 .control .c-btn.pause {
-    background-image: url(./images/play_rdi_btn_pause.png);
+    background-image: url(../images/play_rdi_btn_pause.png);
 }
 
 .control .c-btn.next {
-    background-image: url(./images/play_btn_next.png);
+    background-image: url(../images/play_btn_next.png);
 }
 
 .control .c-btn.list, .control .c-btn.loop {
@@ -270,12 +270,12 @@ html, body {
 }
 
 .control .c-btn.list {
-    background-image: url(./images/play_icn_src.png);
+    background-image: url(../images/play_icn_src.png);
 }
 
 .control .c-btn.loop {
     position: relative;
-    background-image: url(./images/play_icn_loop.png);
+    background-image: url(../images/play_icn_loop.png);
 }
 
 .control .c-btn.loop.active:after {
@@ -343,7 +343,7 @@ li.active, li.active > span {
     height: 15px;
     margin-right: 5px;
     background-size: cover;
-    background-image: url(./images/voice_icon.png);
+    background-image: url(../images/voice_icon.png);
 }
 
 .hidden {

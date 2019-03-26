@@ -1,8 +1,9 @@
 const qq = {
     songType: {
-        size320: {t: 'M800', e: '.mp3'},
-        sizeogg: {t: 'O600', e: '.ogg'},
+        // size320: {t: 'M800', e: '.mp3'},
+        // sizeogg: {t: 'O600', e: '.ogg'},
         size128: {t: 'M500', e: '.mp3'},
+        size96: {t: 'C400', e: '.m4a'},
         size24: {t: 'C100', e: '.m4a'},
     },
     playsquare: (playlistIdArr, callback) => {

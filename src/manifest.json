@@ -19,7 +19,8 @@
     "activeTab",
     "webRequest",
     "webRequestBlocking",
-    "<all_urls>"
+    "<all_urls>",
+    "notifications"
   ],
   "options_page": "options.html"
 }

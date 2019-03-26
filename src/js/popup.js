@@ -1,32 +1,49 @@
+import '../css/popup.css'
+
 const ctx = chrome.extension.getBackgroundPage().ctx;
 
 // 更新播放列表
 const updatePlaylist = (currentIndex) => {
-    $popup.$listContent.children('li.active').removeClass('active').children('div.voice-icon').remove();
-    $popup.$listContent.children('li').eq(currentIndex).addClass('active')
+    $ui.$listContent.children('li.active').removeClass('active').children('div.voice-icon').remove();
+    $ui.$listContent.children('li').eq(currentIndex).addClass('active')
         .prepend($('<div>').addClass('voice-icon'));
-    $popup.$listContent.animate({
-        scrollTop: (currentIndex + 1) * 41 - $popup.$listContent.height() / 2
+    $ui.$listContent.animate({
+        scrollTop: (currentIndex + 1) * 41 - $ui.$listContent.height() / 2
     });
 };
 
 // 指针暂停
-const changeNeedle = (isPlay) => {
-    if (isPlay) {
-        ctx.$needle.removeClass('pause-needle').addClass('resume-needle');
+const changeNeedle = () => {
+    if (ctx.isPlaying) {
+        $ui.$needle.removeClass('pause-needle').addClass('resume-needle');
     } else {
-        ctx.$needle.removeClass('resume-needle').addClass('pause-needle');
+        $ui.$needle.removeClass('resume-needle').addClass('pause-needle');
     }
+};
+
+// 默认播放列表语言
+const initPlaylistLang = () => {
+};
+
+// 默认歌词
+const initLyric = () => {
+    const lyricTextArr = ctx.currentSong && ctx.currentSong.lyric ? ctx.currentSong.lyric.map((v) => {
+        return v['text'];
+    }) : [];
+    lyricTextArr.length && addLyric(lyricTextArr);
+};
+
+// 添加歌词
+const addLyric = (lyricTextArr) => {
+    const html = lyricTextArr.map((v) => {
+        return '<p>' + v;
+    });
+    $ui.$lyric.html(html);
 };
 
 // 清空歌词
 const cleanLyric = () => {
-    ctx.$lyric.html('');
-};
-
-// 添加歌词
-const addLyric = (lyricContent) => {
-    ctx.$lyric.html(lyricContent);
+    $ui.$lyric.html('');
 };
 
 // 隐藏歌词
@@ -46,33 +63,33 @@ const updateLyric = (lyricIndex) => {
 
 // 更新进程
 const changeProcess = (duration, bufferTime, currentTime, processBtnState) => {
-    ctx.$totTime.text(ctx.validateTime(duration / 60) + ":" + ctx.validateTime(duration % 60));
-    ctx.$rdyBar.width(bufferTime / duration * 100 + '%');
+    $ui.$totTime.text(ctx.validateTime(duration / 60) + ":" + ctx.validateTime(duration % 60));
+    $ui.$rdyBar.width(bufferTime / duration * 100 + '%');
     if (!processBtnState) {
-        ctx.$curBar.width(currentTime / duration * 100 + '%');
-        ctx.$curTime.text(ctx.validateTime(currentTime / 60) + ":" + ctx.validateTime(currentTime % 60));
+        $ui.$curBar.width(currentTime / duration * 100 + '%');
+        $ui.$curTime.text(ctx.validateTime(currentTime / 60) + ":" + ctx.validateTime(currentTime % 60));
     }
 };
 
 // 播放
 const play = () => {
-    ctx.changeAnimationState(ctx.diskCovers[1], 'running');
-    $ui.changeNeedle(true);
-    ctx.$playBtn.hide();
-    ctx.$pauseBtn.show();
+    $ui.changeAnimationState();
+    $ui.changeNeedle();
+    $ui.$playBtn.hide();
+    $ui.$pauseBtn.show();
 };
 
 // 暂停
 const pause = () => {
-    ctx.changeAnimationState(ctx.diskCovers[1], 'paused');
-    $ui.changeNeedle(false);
-    ctx.$playBtn.show();
-    ctx.$pauseBtn.hide();
+    $ui.changeAnimationState();
+    $ui.changeNeedle();
+    $ui.$playBtn.show();
+    $ui.$pauseBtn.hide();
 };
 
 // 循环
 const loop = () => {
-    $('#controls .loop').toggleClass('active');
+    $ui.$loop.toggleClass('active');
 };
 
 // 上一首
@@ -92,12 +109,12 @@ const moveTo = () => {
 
 // 隐藏播放列表
 const hidePlayList = () => {
-    $popup.$playlist.animate({bottom: -$popup.$playlist.height() + 'px'}, 200);
+    $ui.$playlist.animate({bottom: -$ui.$playlist.height() + 'px'}, 200);
 };
 
 // 显示播放列表
 const showPlaylist = () => {
-    $popup.$playlist.animate({bottom: '0px'}, 200);
+    $ui.$playlist.animate({bottom: '0px'}, 200);
 };
 
 // 默认按钮
@@ -157,28 +174,13 @@ const updatePic = () => {
 };
 window.updatePic = updatePic;
 
-ctx.changeAnimationState = ($ele, state) => {
+const changeAnimationState = () => {
+    const $ele = $ui.$diskCovers[1];
+    const state = ctx.isPlaying ? 'running' : 'paused';
     $ele.css({
         'animation-play-state': state,
         '-webkit-animation-play-state': state
     });
-};
-
-// 初始化组件
-const initData = () => {
-    $popup.$curBar = $('#process .cur');
-    $popup.$curTime = $('#current-time');
-    $popup.$listContent = $('#list-content');
-    $popup.$lyric = $('#lyric');
-    $popup.$needle = $('#needle');
-    $popup.$pauseBtn = $('#controls .pause');
-    $popup.$playBtn = $('#controls .play');
-    $popup.$playlist = $('#playlist');
-    $popup.$processBar = $('#process .process-bar');
-    $popup.$processBtn = $('#process-btn');
-    $popup.$rdyBar = $('#process .rdy');
-    $popup.$totTime = $('#total-time');
-    $popup.$diskCovers = [$('.disk-cover:eq(0)'), $('.disk-cover:eq(1)'), $('.disk-cover:eq(2)')];
 };
 
 // 初始化状态
@@ -192,12 +194,12 @@ const initState = () => {
             ctx.hidePlayList();
         }
     });
-    ctx.singleLoop ? $('#controls .loop').addClass('active') : null;
+    ctx.singleLoop ? $ui.$loop.addClass('active') : null;
 };
 
 // 初始化播放列表
-const initPlayList = () => {
-    $popup.$listContent.html('');
+const initPlaylist = () => {
+    $ui.$listContent.html('');
     $('#list-count').html(ctx.playlist.length);
     $.each(ctx.playlist, (i, item) => {
         const $li = $('<li>').html(ctx.transfer ? item.songTransfer : item.song).append($('<span>').html('   -' + ctx.transfer ? item.artistTransfer : item.artist));
@@ -209,25 +211,24 @@ const initPlayList = () => {
                 ctx.moveTo(i);
             }
         });
-        $popup.$listContent.append($li);
+        $ui.$listContent.append($li);
     });
-    $popup.updatePlaylist(ctx.currentIndex);
-    $popup.$playlist.css('bottom', -$popup.$playlist.height() + 'px');
+    $ui.updatePlaylist(ctx.currentIndex);
+    $ui.$playlist.css('bottom', -$ui.$playlist.height() + 'px');
 };
 
 // 更新背景状态
 ctx.updateCoverState = (derection, preLoad) => {
-    console.log(333333);
     let temp, speed = 800, defaultUrl = require('../images/placeholder_disk_play_song.png'),
         preIndex = ctx.currentIndex - 1 < 0 ? ctx.playlist.length - 1 : ctx.currentIndex - 1,
         nextIndex = ctx.currentIndex + 2 > ctx.playlist.length ? 0 : ctx.currentIndex + 1,
-        posLeft = -ctx.diskCovers[0].width() / 2,
+        posLeft = -$ui.$diskCovers[0].width() / 2,
         posCenter = '50%',
-        posRight = ctx.diskCovers[0].parent().width() + ctx.diskCovers[0].width() / 2,
+        posRight = $ui.$diskCovers[0].parent().width() + $ui.$diskCovers[0].width() / 2,
         updateAlbumImgs = () => {
-            ctx.diskCovers[0].children('.album').attr('src', ctx.playlist[preIndex].img);
-            ctx.diskCovers[1].children('.album').attr('src', ctx.playlist[ctx.currentIndex].img);
-            ctx.diskCovers[2].children('.album').attr('src', ctx.playlist[nextIndex].img);
+            $ui.$diskCovers[0].children('.album').attr('src', ctx.playlist[preIndex].img);
+            $ui.$diskCovers[1].children('.album').attr('src', ctx.playlist[ctx.currentIndex].img);
+            $ui.$diskCovers[2].children('.album').attr('src', ctx.playlist[nextIndex].img);
         },
         animationEnd = () => {
             if (!ctx.songUpdated) {
@@ -236,57 +237,59 @@ ctx.updateCoverState = (derection, preLoad) => {
                 ctx.songUpdated = true;
             }
         }, albumStopRotate = () => {
-            ctx.changeAnimationState(ctx.diskCovers[0], 'paused');
-            ctx.changeAnimationState(ctx.diskCovers[2], 'paused');
+            ctx.changeAnimationState($ui.$diskCovers[0], 'paused');
+            ctx.changeAnimationState($ui.$diskCovers[2], 'paused');
         };
     if (derection === 1) {
         ctx.songUpdated = false;
-        temp = ctx.diskCovers[0];
-        ctx.diskCovers[0] = ctx.diskCovers[1];
-        ctx.diskCovers[1] = ctx.diskCovers[2];
-        ctx.diskCovers[2] = temp;
+        temp = $ui.$diskCovers[0];
+        $ui.$diskCovers[0] = $ui.$diskCovers[1];
+        $ui.$diskCovers[1] = $ui.$diskCovers[2];
+        $ui.$diskCovers[2] = temp;
         albumStopRotate();
         if (preLoad) {
-            ctx.diskCovers[1].children('.album').attr('src', defaultUrl);
+            $ui.$diskCovers[1].children('.album').attr('src', defaultUrl);
         }
-        ctx.diskCovers[2].css('left', posRight);
-        ctx.diskCovers[1].animate({left: posCenter}, speed, animationEnd);
-        ctx.diskCovers[0].animate({left: posLeft}, speed, animationEnd);
+        $ui.$diskCovers[2].css('left', posRight);
+        $ui.$diskCovers[1].animate({left: posCenter}, speed, animationEnd);
+        $ui.$diskCovers[0].animate({left: posLeft}, speed, animationEnd);
     } else if (derection === -1) {
         ctx.songUpdated = false;
-        temp = ctx.diskCovers[2];
-        ctx.diskCovers[2] = ctx.diskCovers[1];
-        ctx.diskCovers[1] = ctx.diskCovers[0];
-        ctx.diskCovers[0] = temp;
+        temp = $ui.$diskCovers[2];
+        $ui.$diskCovers[2] = $ui.$diskCovers[1];
+        $ui.$diskCovers[1] = $ui.$diskCovers[0];
+        $ui.$diskCovers[0] = temp;
         albumStopRotate();
-        ctx.diskCovers[0].css('left', posLeft);
-        ctx.diskCovers[1].animate({left: posCenter}, speed, animationEnd);
-        ctx.diskCovers[2].animate({left: posRight}, speed, animationEnd);
+        $ui.$diskCovers[0].css('left', posLeft);
+        $ui.$diskCovers[1].animate({left: posCenter}, speed, animationEnd);
+        $ui.$diskCovers[2].animate({left: posRight}, speed, animationEnd);
     } else {
         ctx.songUpdated = true;
-        ctx.diskCovers[0].css('left', posLeft).show();
-        ctx.diskCovers[1].css('left', posCenter).show();
-        ctx.diskCovers[2].css('left', posRight).show();
+        $ui.$diskCovers[0].css('left', posLeft).show();
+        $ui.$diskCovers[1].css('left', posCenter).show();
+        $ui.$diskCovers[2].css('left', posRight).show();
         updateAlbumImgs();
     }
 };
 
 // ui
-window.$popup = {
-    $curBar: null,
-    $curTime: null,
-    $listContent: null,
-    $lyric: null,
-    $needle: null,
-    $pauseBtn: null,
-    $playBtn: null,
-    $playlist: null,
-    $processBar: null,
-    $processBtn: null,
-    $rdyBar: null,
-    $totTime: null,
-    $diskCovers: [],
+window.$ui = {
+    $curBar: $('#process .cur'),
+    $curTime: $('#current-time'),
+    $listContent: $('#list-content'),
+    $lyric: $('.lyric'),
+    $needle: $('#needle'),
+    $pauseBtn: $('#controls .pause'),
+    $playBtn: $('#controls .play'),
+    $playlist: $('#playlist'),
+    $processBar: $('#process .process-bar'),
+    $processBtn: $('#process-btn'),
+    $rdyBar: $('#process .rdy'),
+    $totTime: $('#total-time'),
+    $diskCovers: [$('.disk-cover:eq(0)'), $('.disk-cover:eq(1)'), $('.disk-cover:eq(2)')],
+    $loop: $('.loop'),
     updatePlaylist: updatePlaylist,
+    changeAnimationState: changeAnimationState,
     changeNeedle: changeNeedle,
     cleanLyric: cleanLyric,
     addLyric: addLyric,
@@ -301,16 +304,17 @@ window.$popup = {
     moveTo: moveTo,
     hidePlayList: hidePlayList,
     showPlaylist: showPlaylist,
-    initData: initData,
     initState: initState,
-    initPlayList: initPlayList,
+    initPlaylist: initPlaylist,
+
 };
 
 // 通信
 chrome.runtime.onMessage.addListener(
     (request, sender, sendResponse) => {
         if (request instanceof Array) {
-            $popup[request[0]](...request.slice(1));
+            console.log(request[0]);
+            $ui[request[0]](...request.slice(1));
         }
     });
 
@@ -363,14 +367,18 @@ $(() => {
         }
     });
 
-    // 播放
-    $('.play').click(() => {
-        ctx.play()
-    });
+    // 默认播放列表
+    initPlaylist();
 
-    // 暂停
-    $('.pause').click(() => {
-        ctx.pause()
+    // 默认播放列表语言
+    initPlaylistLang();
+
+    // 默认歌词
+    initLyric();
+
+    // 播放
+    $('.play, .pause').click(() => {
+        ctx.play()
     });
 
     // 循环
@@ -390,7 +398,8 @@ $(() => {
 
     // 显示播放列表
     $('.list').click(() => {
-        ctx.showPlaylist()
+        console.log('show playlist');
+        showPlaylist()
     });
 
     $('.disk-cover, #lyric').click(() => {
@@ -405,11 +414,6 @@ $(() => {
         if (ctx.currentSong.songTransfer) {
             updateMusicInfo();
 
-            // 默认播放列表
-            ctx.initPlayList();
-
-            // 默认歌词
-            ctx.initLyric();
         }
     });
 
@@ -418,7 +422,7 @@ $(() => {
 
         // 播放/暂停
         if (event.keyCode === 13 || event.keyCode === 32) {
-            ctx.isPlaying ? ctx.pause() : ctx.play();
+            ctx.play();
             return
         }
 
