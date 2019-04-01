@@ -1,7 +1,6 @@
 import '../css/options.css'
 
 const ctx = chrome.extension.getBackgroundPage().ctx;
-console.log(ctx);
 
 // 默认播放列表
 const initPlaylist = () => {
@@ -29,33 +28,27 @@ const initPlaylistLang = () => {
 
 // 默认歌词
 const initLyric = () => {
+    $ui.$lyric.html('');
     const lyricTextArr = ctx.currentSong && ctx.currentSong.lyric ? ctx.currentSong.lyric.map((v) => {
         return v['text'];
     }) : [];
-    lyricTextArr.length && addLyric(lyricTextArr);
-};
-
-// 添加歌词
-const addLyric = (lyricTextArr) => {
+    if (!lyricTextArr.length) {
+        return;
+    }
     const html = lyricTextArr.map((v) => {
         return '<li>' + v;
     });
     $ui.$lyric.html(html);
 };
 
-// 清空歌词
-const cleanLyric = () => {
-    $ui.$lyric.html('');
+// 默认播放状态
+const play = () => {
+    $ui.$play.html(ctx.isPlaying ? '⏸' : '⏯');
 };
 
 // 默认循环状态
 const loop = () => {
     $ui.$loop.html(ctx.singleLoop ? '🔁' : '🔂');
-};
-
-// 默认播放状态
-const play = () => {
-    $ui.$play.html(ctx.isPlaying ? '⏸' : '⏯');
 };
 
 const updateMusicInfo = () => {
@@ -65,6 +58,15 @@ const updateMusicInfo = () => {
 
 const updateCoverState = () => {
 
+};
+
+// 歌曲已更新
+const songUpdated = () => {
+
+    // 更新信息
+    updateMusicInfo();
+
+    setTimeout(ctx.play, 500);
 };
 
 // ui
@@ -77,13 +79,12 @@ window.$ui = {
     $play: $('.play'),
     initPlaylist: initPlaylist,
     initPlaylistLang: initPlaylistLang,
-    cleanLyric: cleanLyric,
     initLyric: initLyric,
     updateMusicInfo: updateMusicInfo,
     updateCoverState: updateCoverState,
-    addLyric: addLyric,
     loop: loop,
     play: play,
+    songUpdated: songUpdated,
 };
 
 $(() => {
@@ -97,11 +98,11 @@ $(() => {
     // 默认歌词
     initLyric();
 
-    // 默认循环状态
-    loop();
-
     // 默认播放状态
     play();
+
+    // 默认循环状态
+    loop();
 
     // 翻译播放列表
     $('.transfer').click(() => {
@@ -121,12 +122,12 @@ $(() => {
     });
 
     // 播放
-    $('.play').click(() => {
+    $ui.$play.click(() => {
         ctx.play()
     });
 
     // 循环
-    $('.loop').click(() => {
+    $ui.$loop.click(() => {
         ctx.loop()
     });
 
@@ -135,7 +136,7 @@ $(() => {
 
         // 播放/暂停
         if (event.keyCode === 13 || event.keyCode === 32) {
-            ctx.isPlaying ? ctx.pause() : ctx.play();
+            ctx.play();
             return
         }
 

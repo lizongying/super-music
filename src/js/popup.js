@@ -27,38 +27,32 @@ const initPlaylistLang = () => {
 
 // 默认歌词
 const initLyric = () => {
+    $ui.$lyric.html('');
     const lyricTextArr = ctx.currentSong && ctx.currentSong.lyric ? ctx.currentSong.lyric.map((v) => {
         return v['text'];
     }) : [];
-    lyricTextArr.length && addLyric(lyricTextArr);
-};
-
-// 添加歌词
-const addLyric = (lyricTextArr) => {
+    if (!lyricTextArr.length) {
+        return;
+    }
     const html = lyricTextArr.map((v) => {
         return '<p>' + v;
     });
     $ui.$lyric.html(html);
 };
 
-// 清空歌词
-const cleanLyric = () => {
-    $ui.$lyric.html('');
-};
-
 // 隐藏歌词
 const hiddenLyric = () => {
-    ctx.$needle.removeClass('hidden');
-    ctx.$lyric.addClass('hidden');
+    $ui.$needle.removeClass('hidden');
+    $ui.$lyric.addClass('hidden');
 };
 
 // 更新歌词
 const updateLyric = (lyricIndex) => {
-    ctx.$lyric.scrollLeft((ctx.$lyric.children().length - lyricIndex) * 24 - 192);
+    $ui.$lyric.scrollLeft(($ui.$lyric.children().length - lyricIndex) * 24 - 192);
     if (lyricIndex > 0) {
-        ctx.$lyric.children(':eq(' + (lyricIndex - 1) + ')').removeClass('active');
+        $ui.$lyric.children(':eq(' + (lyricIndex - 1) + ')').removeClass('active');
     }
-    ctx.$lyric.children(':eq(' + lyricIndex + ')').addClass('active');
+    $ui.$lyric.children(':eq(' + lyricIndex + ')').addClass('active');
 };
 
 // 更新进程
@@ -73,7 +67,7 @@ const changeProcess = (duration, bufferTime, currentTime, processBtnState) => {
 
 // 播放
 const play = () => {
-    $ui.changeAnimationState();
+    $ui.changeAnimationState($ui.$diskCovers[1], ctx.isPlaying ? 'running' : 'paused');
     $ui.changeNeedle();
     $ui.$playBtn.hide();
     $ui.$pauseBtn.show();
@@ -81,7 +75,7 @@ const play = () => {
 
 // 暂停
 const pause = () => {
-    $ui.changeAnimationState();
+    $ui.changeAnimationState($ui.$diskCovers[1], ctx.isPlaying ? 'running' : 'paused');
     $ui.changeNeedle();
     $ui.$playBtn.show();
     $ui.$pauseBtn.hide();
@@ -89,22 +83,22 @@ const pause = () => {
 
 // 循环
 const loop = () => {
-    $ui.$loop.toggleClass('active');
+    ctx.singleLoop ? $ui.$loop.addClass('active') : $ui.$loop.removeClass('active');
 };
 
 // 上一首
 const prev = () => {
-    setTimeout(ctx.updateCoverState(-1), ctx.isPlaying ? 400 : 0);
+    setTimeout(updateCoverState(-1), ctx.isPlaying ? 400 : 0);
 };
 
 // 下一首
 const next = () => {
-    setTimeout(ctx.updateCoverState(1), ctx.isPlaying ? 400 : 0);
+    setTimeout(updateCoverState(1), ctx.isPlaying ? 400 : 0);
 };
 
 // 切换歌曲
 const moveTo = () => {
-    setTimeout(ctx.updateCoverState(1, true), ctx.isPlaying ? 400 : 0);
+    setTimeout(updateCoverState(1, true), ctx.isPlaying ? 400 : 0);
 };
 
 // 隐藏播放列表
@@ -117,22 +111,52 @@ const showPlaylist = () => {
     $ui.$playlist.animate({bottom: '0px'}, 200);
 };
 
+// 歌曲已更新
+const songUpdated = () => {
+
+    // 更新信息
+    updateMusicInfo();
+
+    // 更新图片
+    updatePic();
+
+    // 默认按钮
+    initBtn();
+
+    if (ctx.isPlaying) {
+        setTimeout(ctx.play, 500);
+    }
+
+    updateCoverState(0);
+};
+
+// 更新信息
+const updateMusicInfo = () => {
+    $ui.$song.html(ctx.transfer ? ctx.currentSong.songTransfer : ctx.currentSong.song);
+    $ui.$artist.html(ctx.transfer ? ctx.currentSong.artistTransfer : ctx.currentSong.artist);
+};
+
+// 更新图片
+const updatePic = () => {
+    $ui.$bg.css('background-image', 'url(' + ctx.currentSong.img + ')');
+};
+
 // 默认按钮
 const initBtn = () => {
     const moveFun = (e) => {
             e = e.originalEvent;
             e.preventDefault();
             let duration = ctx.player.duration,
-                totalWidth = ctx.$processBar.width(), percent, moveX, newWidth;
+                totalWidth = $ui.$processBar.width(), percent, moveX, newWidth;
             if (ctx.processBtnState) {
                 moveX = (e.clientX || e.touches[0].clientX) - ctx.originX;
-                newWidth = ctx.$curBar.width() + moveX;
+                newWidth = $ui.$curBar.width() + moveX;
                 if (newWidth > totalWidth || newWidth < 0) {
                     ctx.processBtnState = 0;
                 } else {
                     percent = newWidth / totalWidth;
-                    ctx.$curBar.width(newWidth);
-                    ctx.$curTime.text(ctx.validateTime(percent * duration / 60) + ":" + ctx.validateTime(percent * duration % 60));
+                    $ui.$curBar.width(newWidth);
+                    $ui.$curTime.text(ctx.validateTime(percent * duration / 60) + ":" + ctx.validateTime(percent * duration % 60));
                 }
                 ctx.originX = (e.clientX || e.touches[0].clientX);
             }
@@ -144,57 +168,21 @@ const initBtn = () => {
         },
         endFun = () => {
             if (ctx.processBtnState) {
-                ctx.player.currentTime = ctx.$curBar.width() / ctx.$processBar.width() * ctx.player.duration;
+                ctx.player.currentTime = $ui.$curBar.width() / $ui.$processBar.width() * ctx.player.duration;
                 ctx.processBtnState = 0;
                 ctx.updateProcess();
             }
         };
-    ctx.$processBtn.on('mousedown touchstart', startFun);
+    $ui.$processBtn.on('mousedown touchstart', startFun);
     $("body").on('mouseup touchend', endFun);
     $("#process").on('mousemove touchmove', moveFun);
 };
-window.initBtn = initBtn;
 
-// 更新信息
-const updateMusicInfo = () => {
-    $('#song').html(ctx.transfer ? ctx.currentSong.songTransfer : ctx.currentSong.song);
-    $('#artist').html(ctx.transfer ? ctx.currentSong.artistTransfer : ctx.currentSong.artist);
-};
-window.updateMusicInfo = updateMusicInfo;
-
-const pic = () => {
-    $('#bg').css('background-image', 'url(' + ctx.currentSong.img + ')');
-
-};
-window.pic = pic;
-
-// 更新图片
-const updatePic = () => {
-    setTimeout(updatePic, 10);
-};
-window.updatePic = updatePic;
-
-const changeAnimationState = () => {
-    const $ele = $ui.$diskCovers[1];
-    const state = ctx.isPlaying ? 'running' : 'paused';
+const changeAnimationState = ($ele, state) => {
     $ele.css({
         'animation-play-state': state,
         '-webkit-animation-play-state': state
     });
-};
-
-// 初始化状态
-const initState = () => {
-    $('img').attr('draggable', false);
-    window.addEventListener('resize', ctx.updateCoverState);
-    $('body').on('click touch', (e) => {
-        if ($(e.target).parents('#playlist').length === 0 && !$(e.target).hasClass('list')) {
-
-            // 隐藏播放列表
-            ctx.hidePlayList();
-        }
-    });
-    ctx.singleLoop ? $ui.$loop.addClass('active') : null;
 };
 
 // 初始化播放列表
@@ -237,8 +225,8 @@ ctx.updateCoverState = (derection, preLoad) => {
                 ctx.songUpdated = true;
             }
         }, albumStopRotate = () => {
-            ctx.changeAnimationState($ui.$diskCovers[0], 'paused');
-            ctx.changeAnimationState($ui.$diskCovers[2], 'paused');
+            changeAnimationState($ui.$diskCovers[0], 'paused');
+            changeAnimationState($ui.$diskCovers[2], 'paused');
         };
     if (derection === 1) {
         ctx.songUpdated = false;
@@ -288,11 +276,12 @@ window.$ui = {
     $totTime: $('#total-time'),
     $diskCovers: [$('.disk-cover:eq(0)'), $('.disk-cover:eq(1)'), $('.disk-cover:eq(2)')],
     $loop: $('.loop'),
+    $song: $('#song'),
+    $artist: $('#artist'),
+    $bg: $('#bg'),
     updatePlaylist: updatePlaylist,
     changeAnimationState: changeAnimationState,
     changeNeedle: changeNeedle,
-    cleanLyric: cleanLyric,
-    addLyric: addLyric,
     hiddenLyric: hiddenLyric,
     updateLyric: updateLyric,
     changeProcess: changeProcess,
@@ -304,9 +293,9 @@ window.$ui = {
     moveTo: moveTo,
     hidePlayList: hidePlayList,
     showPlaylist: showPlaylist,
-    initState: initState,
     initPlaylist: initPlaylist,
-
+    updateMusicInfo: updateMusicInfo,
+    songUpdated: songUpdated,
 };
 
 // 通信
@@ -367,6 +356,16 @@ $(() => {
         }
     });
 
+    $('img').attr('draggable', false);
+    window.addEventListener('resize', ctx.updateCoverState);
+    $('body').on('click touch', (e) => {
+        if ($(e.target).parents('#playlist').length === 0 && !$(e.target).hasClass('list')) {
+
+            // 隐藏播放列表
+            ctx.hidePlayList();
+        }
+    });
+
     // 默认播放列表
     initPlaylist();
 
@@ -376,13 +375,16 @@ $(() => {
     // 默认歌词
     initLyric();
 
+    // 默认循环状态
+    loop();
+
     // 播放
     $('.play, .pause').click(() => {
         ctx.play()
     });
 
     // 循环
-    $('.loop').click(() => {
+    $ui.$loop.click(() => {
         ctx.loop()
     });
 

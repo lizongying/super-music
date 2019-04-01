@@ -112,7 +112,6 @@ ctx.preSwitchSong = () => {
 // 更新歌曲
 ctx.updateSong = () => {
     if (!ctx.currentSong.src) {
-        notify(['cleanLyric']);
         ctx.getSong(ctx.currentSong, ctx.callbackSong);
     } else {
         ctx.callbackSong();
@@ -133,13 +132,10 @@ ctx.setInterval = () => {
 };
 
 ctx.updateProcess = () => {
-    const popup = ctx.getPopup();
     if (ctx.lyricShow && ctx.currentSong.lyric && ctx.currentSong.lyric.length > 0 && ctx.player.currentTime > ctx.currentSong.lyric[ctx.lyricIndex].time) {
-        if (popup) {
 
-            // 更新歌词
-            notify(['updateLyric']);
-        }
+        // 更新歌词
+        notify(['updateLyric']);
         ctx.lyricIndex++;
     }
     const buffer = ctx.player.buffered,
@@ -147,11 +143,8 @@ ctx.updateProcess = () => {
         duration = ctx.player.duration,
         currentTime = ctx.player.currentTime;
 
-    if (popup) {
-
-        // 更新进程
-        notify(['changeProcess', duration, bufferTime, currentTime, ctx.processBtnState]);
-    }
+    // 更新进程
+    notify(['changeProcess', duration, bufferTime, currentTime, ctx.processBtnState]);
 };
 
 let extraInfoSpec = ['blocking', 'requestHeaders'];
@@ -335,26 +328,9 @@ ctx.callbackSong = (song) => {
         ctx.lyricIndex = 0;
         ctx.initLyric();
     }
-    notify(['updateMusicInfo']);
-    const popup = ctx.getPopup();
+    notify(['songUpdated']);
     ctx.setInterval();
 
-    if (popup) {
-
-        // 默认按钮
-        notify(['initBtn']);
-    }
-
-    notify(['updateCoverState', 0]);
-    if (popup) {
-
-        // 更新图片
-        notify(['updatePic']);
-    }
-
-    if (ctx.isPlaying) {
-        setTimeout(ctx.play, 500);
-    }
     ctx.getLyric(ctx.currentSong, ctx.callbackLyric);
     localStorage.setItem('currentSongIndex', ctx.currentIndex.toString());
 };
@@ -367,17 +343,6 @@ ctx.callbackTransfer = (data) => {
     updateMusicInfo();
     // ctx.initPlayList();
     ctx.initLyric();
-};
-
-//
-// var pop = chrome.extension.getViews({type:'popup'});//获取popup页面
-// console.log(pop[0].b);//调用第一个popup的变量或方法。
-
-// 初始化ui
-ctx.initUi = () => {
-
-    // 初始化状态
-    notify(['initState']);
 };
 
 // 初始化
@@ -402,8 +367,6 @@ ctx.init = () => {
             ctx.getPlaylist(playlistIdArr, ctx.callbackPlaylist);
         } else {
 
-            // 初始化ui
-            ctx.initUi();
         }
     } else {
 
