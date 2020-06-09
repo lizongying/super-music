@@ -3,6 +3,9 @@ const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CleanWebpackPlugin = require('clean-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
+const ZipPlugin = require('zip-webpack-plugin');
+
+const name = 'Super Music';
 
 module.exports = {
     mode: 'production',
@@ -10,7 +13,7 @@ module.exports = {
         publicPath: '/',
         filename: '[name].js',
         chunkFilename: '[name].chunk.js',
-        path: path.join(__dirname, './dist')
+        path: path.join(__dirname, './dist'),
     },
     entry: {
         background: './src/js/background',
@@ -23,8 +26,8 @@ module.exports = {
                 test: /\.css$/,
                 use: [
                     'style-loader',
-                    'css-loader'
-                ]
+                    'css-loader',
+                ],
             },
             {
                 test: /\.(png|svg|jpg|gif)$/,
@@ -32,24 +35,24 @@ module.exports = {
                     {
                         loader: 'file-loader',
                         options: {
-                            outputPath: 'images'
-                        }
-                    }
-                ]
+                            outputPath: 'images',
+                        },
+                    },
+                ],
             },
-        ]
+        ],
     },
     plugins: [
         new webpack.ProvidePlugin({
             $: 'jquery',
-            jQuery: 'jquery'
+            jQuery: 'jquery',
         }),
         new CleanWebpackPlugin(['dist']),
         new HtmlWebpackPlugin({
             inject: true,
             filename: 'popup.html',
             template: './src/popup.html',
-            title: 'Super Music',
+            title: name,
             chunks: ['popup'],
             minify: {
                 collapseBooleanAttributes: true,
@@ -74,7 +77,7 @@ module.exports = {
             inject: true,
             filename: 'options.html',
             template: './src/options.html',
-            title: 'Super Music',
+            title: name,
             chunks: ['options'],
             minify: {
                 collapseBooleanAttributes: true,
@@ -95,15 +98,22 @@ module.exports = {
                 useShortDoctype: true,
             },
         }),
-        new CopyWebpackPlugin([
-            {
-                from: './src/images/icon.png',
-                to: path.join(__dirname, './dist/icon.png'),
-            },
-            {
-                from: './src/manifest.json',
-                to: path.join(__dirname, './dist/manifest.json'),
-            },
-        ]),
+        new CopyWebpackPlugin({
+            patterns: [
+                {
+                    from: './src/images/icon.png',
+                    to: path.join(__dirname, './dist/icon.png'),
+                },
+                {
+                    from: './src/manifest.json',
+                    to: path.join(__dirname, './dist/manifest.json'),
+                },
+            ],
+        }),
+        new ZipPlugin({
+            path: '../zip',
+            filename: name,
+            pathPrefix: 'dist',
+        }),
     ],
 };
